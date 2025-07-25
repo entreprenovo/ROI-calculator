@@ -52,7 +52,7 @@
       const instance = {
         config: {
           serviceCost: 7500,
-          bookingUrl: 'https://cal.com/talescouto/30min',
+          bookingUrl: 'https://calendly.com/tales-couto/30min',
           ...config
         },
         
