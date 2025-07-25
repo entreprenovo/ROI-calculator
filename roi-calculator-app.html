@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROI Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-accent': {
+              'DEFAULT': '#10B981',
+              'dark': '#059669',
+            },
+            'brand-success': {
+              'DEFAULT': '#10B981',
+              'dark': '#059669'
+            }
+          }
+        }
+      }
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        overflow-x: hidden;
+      }
+      
+      /* Custom slider styles */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+      }
+      
+      input[type="range"]::-webkit-slider-track {
+        height: 0.625rem;
+        border-radius: 0.5rem;
+      }
+      
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 2px solid rgba(16, 185, 129, 0.5);
+        margin-top: -0.5rem;
+        transition: all 0.2s;
+      }
+      
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      }
+      
+      input[type="range"]::-moz-range-track {
+        height: 0.625rem;
+        border-radius: 0.5rem;
+      }
+      
+      input[type="range"]::-moz-range-thumb {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 2px solid rgba(16, 185, 129, 0.5);
+        transition: all 0.2s;
+      }
+      
+      /* Loading animation */
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      
+      .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      
+      /* Smooth transitions */
+      .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+      }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="module">
+    import React, { useState, useEffect, useCallback, useMemo } from 'https://esm.sh/react@19.1.0';
+    import ReactDOM from 'https://esm.sh/react-dom@19.1.0/client';
+    import { motion, AnimatePresence } from 'https://esm.sh/framer-motion@12.23.9';
+    import { 
+        Robot, Sparkle, Clock, CurrencyDollar, TrendUp, ChartBar, 
+        CalendarBlank, ArrowLeft, Calculator, Target, Lightning, X 
+    } from 'https://esm.sh/phosphor-react@1.4.1';
+    import { 
+        BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, 
+        PieChart, Pie, Cell 
+    } from 'https://esm.sh/recharts@3.1.0';
+    
+    // Get configuration from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const config = {
+        serviceCost: parseInt(urlParams.get('serviceCost')) || 7500,
+        bookingUrl: urlParams.get('bookingUrl') || 'https://calendly.com/talescouto/30min'
+    };
+    
+    // Constants
+    const INDUSTRY_OPTIONS = [
+        { label: "General Business", value: 1.0 },
+        { label: "Professional Services", value: 1.3 },
+        { label: "E-commerce", value: 1.2 },
+        { label: "Real Estate", value: 1.4 },
+        { label: "Healthcare", value: 1.5 },
+        { label: "Technology", value: 1.3 },
+        { label: "Manufacturing", value: 1.2 },
+        { label: "Financial Services", value: 1.6 },
+        { label: "Marketing Agency", value: 1.4 },
+    ];
+    
+    const INITIAL_FORM_DATA = {
+        industry: 1.0,
+        revenue: 250000,
+        teamSize: 15,
+        hourlyCost: 95,
+        leadGenHours: 20,
+        followUpHours: 16,
+        dataEntryHours: 12,
+        schedulingHours: 8,
+        reportingHours: 6,
+        emailHours: 10,
+    };
+    
+    const TOTAL_STEPS = 3;
+    const PIE_CHART_COLORS = ['#10B981', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#6366f1'];
+    const BAR_CHART_COLORS = { manual: '#94a3b8', automated: '#10B981' };
+    
+    // Animated Counter Component
+    const AnimatedCounter = ({ from = 0, to, prefix = '', suffix = '' }) => {
+        const [count, setCount] = useState(from);
+        
+        useEffect(() => {
+            const duration = 1500;
+            const startTime = Date.now();
+            const endValue = to;
+            
+            const animate = () => {
+                const now = Date.now();
+                const progress = Math.min((now - startTime) / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const currentValue = from + (endValue - from) * easeOut;
+                
+                setCount(currentValue);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            
+            animate();
+        }, [from, to]);
+        
+        return <span>{prefix}{Math.round(count).toLocaleString()}{suffix}</span>;
+    };
+    
+    // Slider Component
+    const Slider = ({ id, label, value, min, max, step = 1, unit = '', onChange }) => {
+        const percentage = max > min ? ((value - min) / (max - min)) * 100 : 0;
+        
+        const sliderStyle = {
+            background: `linear-gradient(to right, #10B981 ${percentage}%, #e2e8f0 ${percentage}%)`,
+        };
+        
+        return (
+            <div className="w-full">
+                <div className="flex justify-between items-center mb-2">
+                    <label htmlFor={id} className="text-sm font-medium text-slate-600">{label}</label>
+                    <span className="text-sm font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-700">
+                        {unit}{value.toLocaleString()}
+                    </span>
+                </div>
+                <input
+                    type="range"
+                    id={id}
+                    name={id}
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={value}
+                    onChange={onChange}
+                    style={sliderStyle}
+                    className="w-full h-2.5 rounded-lg appearance-none cursor-pointer"
+                />
+            </div>
+        );
+    };
+    
+    // Step 1 Component
+    const Step1 = ({ data, updateData, motionProps }) => {
+        const handleInputChange = (e) => {
+            const { id, value } = e.target;
+            updateData(id, parseFloat(value));
+        };
+        
+        return (
+            <motion.div {...motionProps} className="space-y-8">
+                <div className="text-center">
+                    <h3 className="text-xl font-bold text-slate-900">Tell us about your business</h3>
+                    <p className="text-slate-500">This helps us tailor the calculation to your specific situation.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <label htmlFor="industry" className="block text-sm font-medium text-slate-600 mb-2">Industry</label>
+                        <select
+                            id="industry"
+                            value={data.industry}
+                            onChange={handleInputChange}
+                            className="w-full bg-slate-100 border border-slate-300 rounded-md py-2.5 px-3 text-slate-900 focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition"
+                        >
+                            {INDUSTRY_OPTIONS.map(opt => (
+                                <option key={opt.label} value={opt.value} className="bg-white">{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <Slider
+                            id="revenue"
+                            label="Monthly Revenue"
+                            value={data.revenue}
+                            min={0}
+                            max={250000}
+                            step={250}
+                            unit="$"
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                    
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <Slider
+                            id="teamSize"
+                            label="Team Size"
+                            value={data.teamSize}
+                            min={1}
+                            max={100}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <Slider
+                            id="hourlyCost"
+                            label="Average Hourly Cost"
+                            value={data.hourlyCost}
+                            min={10}
+                            max={250}
+                            unit="$"
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
+    
+    // Step 2 Component
+    const Step2 = ({ data, updateData, motionProps }) => {
+        const handleInputChange = (e) => {
+            const { id, value } = e.target;
+            updateData(id, parseFloat(value));
+        };
+        
+        const tasks = [
+            { id: 'leadGenHours', label: 'Lead Generation', min: 0, max: 50 },
+            { id: 'followUpHours', label: 'Customer Follow-ups', min: 0, max: 40 },
+            { id: 'dataEntryHours', label: 'Data Entry & Admin', min: 0, max: 30 },
+            { id: 'schedulingHours', label: 'Scheduling & Coordination', min: 0, max: 25 },
+            { id: 'reportingHours', label: 'Reporting & Analytics', min: 0, max: 20 },
+            { id: 'emailHours', label: 'Email Management', min: 0, max: 25 },
+        ];
+
+        const totalWeeklyHours = tasks.reduce((sum, task) => sum + data[task.id], 0);
+
+        return (
+            <motion.div {...motionProps} className="space-y-8">
+                <div className="text-center">
+                    <h3 className="text-xl font-bold text-slate-900">Analyze Manual Processes</h3>
+                    <p className="text-slate-500 mb-4">Estimate the hours per week your team spends on these tasks.</p>
+                    <div className="inline-block bg-brand-accent/10 text-brand-accent-dark font-semibold py-2 px-5 rounded-full transition-all duration-300">
+                        Total Weekly Hours: <span className="font-bold">{totalWeeklyHours}</span>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {tasks.map(task => (
+                        <div key={task.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                            <Slider
+                                id={task.id}
+                                label={`${task.label} (hrs/week)`}
+                                value={data[task.id]}
+                                min={task.min}
+                                max={task.max}
+                                onChange={handleInputChange}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+        );
+    };
+    
+    // Step 3 Component (Results)
+    const Step3 = ({ results, formData, motionProps }) => {
+        const [view, setView] = useState('results');
+        
+        const calendlyUrl = useMemo(() => {
+            try {
+                const url = new URL(config.bookingUrl);
+                url.searchParams.append('hide_event_type_details', '1');
+                url.searchParams.append('hide_gdpr_banner', '1');
+                url.searchParams.append('background_color', 'f8fafc');
+                url.searchParams.append('text_color', '1e293b');
+                url.searchParams.append('primary_color', '10B981');
+                return url.toString();
+            } catch(e) {
+                console.error("Invalid booking URL", e);
+                return "";
+            }
+        }, []);
+        
+        const costData = useMemo(() => [
+            { name: 'Manual Work Cost', Cost: results.monthlyWastedCost, fill: BAR_CHART_COLORS.manual },
+            { name: 'Cost After Automation', Cost: results.monthlyWastedCost - results.monthlySavings, fill: BAR_CHART_COLORS.automated },
+        ], [results]);
+
+        const timeData = useMemo(() => [
+            { name: 'Lead Gen', value: formData.leadGenHours },
+            { name: 'Follow-ups', value: formData.followUpHours },
+            { name: 'Data Entry', value: formData.dataEntryHours },
+            { name: 'Scheduling', value: formData.schedulingHours },
+            { name: 'Reporting', value: formData.reportingHours },
+            { name: 'Email Mgmt', value: formData.emailHours },
+        ].filter(d => d.value > 0), [formData]);
+        
+        const metricCards = [
+            { id: 'moneySaved', value: results.monthlySavings, label: "Monthly Cost Savings", prefix: "$", icon: CurrencyDollar, highlight: true },
+            { id: 'revenueBoost', value: results.monthlyRevenueBoost, label: "Add. Revenue Potential", prefix: "$", icon: TrendUp, highlight: true },
+            { id: 'timeSaved', value: results.hoursAutomated, label: "Hours Automated/Month", suffix: " hrs", icon: Clock, highlight: false },
+            { id: 'productivityGain', value: results.productivityGain, label: "Productivity Increase", suffix: "%", icon: ChartBar, highlight: false },
+        ];
+        
+        const tooltipStyle = { 
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '0.75rem',
+            zIndex: 1000,
+            color: '#1e293b',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+        };
+        
+        return (
+            <motion.div {...motionProps}>
+                <AnimatePresence mode="wait">
+                    {view === 'results' ? (
+                        <motion.div
+                            key="results"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <div className="text-center mb-8">
+                                <h3 className="text-2xl font-bold text-slate-900">Your Automation ROI Potential</h3>
+                                <p className="text-slate-500">Here's how AI automation can transform your business.</p>
+                            </div>
+
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 md:p-10 text-center shadow-2xl shadow-emerald-500/10 mb-8 relative overflow-hidden">
+                                <div className="absolute -inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_60%)]"></div>
+                                <div className="relative">
+                                    <h4 className="text-lg font-medium text-emerald-600 mb-2 tracking-wide">Stunning First-Year Return</h4>
+                                    <div className="text-6xl sm:text-7xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-700 tracking-tighter">
+                                        <AnimatedCounter from={0} to={results.roi === Infinity ? 10000 : results.roi} />%
+                                    </div>
+                                    <p className="mt-2 text-slate-600 max-w-md mx-auto">Based on your inputs, this is your potential ROI after implementing our AI solutions.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                {metricCards.map(metric => {
+                                    const Icon = metric.icon;
+                                    return (
+                                        <div key={metric.id} className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all duration-300">
+                                            <Icon weight="bold" className={`mx-auto h-7 w-7 mb-2 ${metric.highlight ? 'text-brand-success' : 'text-brand-accent'}`} />
+                                            <div className="text-2xl md:text-3xl font-bold text-slate-800">
+                                                <AnimatedCounter from={0} to={metric.value} prefix={metric.prefix} suffix={metric.suffix} />
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-1">{metric.label}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200">
+                                    <h4 className="font-bold text-slate-700 mb-4 text-center">Monthly Cost: Manual vs. Automated</h4>
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <BarChart data={costData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                            <XAxis dataKey="name" stroke="#64748b" fontSize={12} interval={0} tick={{ dy: 10 }} />
+                                            <YAxis stroke="#64748b" fontSize={12} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}/>
+                                            <Tooltip cursor={{fill: 'rgba(226, 232, 240, 0.5)'}} contentStyle={tooltipStyle} formatter={(value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)} />
+                                            <Bar dataKey="Cost" radius={[4, 4, 0, 0]}>
+                                                {costData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 relative">
+                                    <h4 className="font-bold text-slate-700 mb-4 text-center">Weekly Hours Spent on Manual Tasks</h4>
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <PieChart>
+                                            <Pie 
+                                                data={timeData} 
+                                                dataKey="value" 
+                                                nameKey="name" 
+                                                cx="50%" 
+                                                cy="50%" 
+                                                innerRadius={50} 
+                                                outerRadius={80} 
+                                                labelLine={false} 
+                                                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                                                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                                                    return percent > 0.05 ? <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="black">{`${(percent * 100).toFixed(0)}%`}</text> : null;
+                                                }}
+                                            >
+                                                {timeData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[index % PIE_CHART_COLORS.length]} stroke="none" />)}
+                                            </Pie>
+                                            <Tooltip cursor={{fill: 'rgba(226, 232, 240, 0.5)'}} contentStyle={tooltipStyle} formatter={(value, name) => [`${value} hrs/week`, name]} />
+                                            <Legend iconSize={10} wrapperStyle={{fontSize: '12px', color: '#64748b'}}/>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="text-center">
+                                            <p className="text-2xl font-bold text-slate-800">{timeData.reduce((acc, item) => acc + item.value, 0)}</p>
+                                            <p className="text-xs text-slate-500">Total hrs/week</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                                    <div className="flex-shrink-0">
+                                        <Robot size={40} className="text-slate-500"/>
+                                    </div>
+                                    <div className="flex-grow">
+                                        <h4 className="font-bold text-lg text-slate-800">Ready for the Next Step?</h4>
+                                        <p className="text-slate-500">Book a free consultation to discuss your automation potential and get a detailed roadmap.</p>
+                                    </div>
+                                    <div className="flex-shrink-0 w-full md:w-auto">
+                                        <button 
+                                            onClick={() => setView('booking')} 
+                                            className="w-full bg-brand-accent hover:bg-brand-accent-dark text-white font-bold py-3 px-6 rounded-full shadow-lg shadow-brand-accent/20 hover:shadow-xl transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                                        >
+                                            <CalendarBlank size={20} weight="bold" />
+                                            Book a Free Consultation
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="booking"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+                                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 text-center sm:text-left">Schedule Your Consultation</h3>
+                                <button 
+                                    onClick={() => setView('results')}
+                                    className="flex items-center justify-center gap-2 w-full sm:w-auto text-slate-600 hover:text-slate-900 font-semibold py-2.5 px-5 rounded-full bg-slate-200 hover:bg-slate-300 transition-all"
+                                    aria-label="Back to results"
+                                >
+                                    <ArrowLeft size={20} weight="bold" />
+                                    Back to Results
+                                </button>
+                            </div>
+                            <div className="rounded-xl overflow-hidden border border-slate-200 h-[650px] sm:h-[700px] bg-white">
+                                <iframe
+                                    src={calendlyUrl}
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    title="Schedule a meeting"
+                                    className="w-full h-full"
+                                ></iframe>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+        );
+    };
+    
+    // Main Calculator Component
+    const ROICalculator = () => {
+        const [currentStep, setCurrentStep] = useState(1);
+        const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+        const [results, setResults] = useState(null);
+        
+        const updateData = useCallback((key, value) => {
+            setFormData(prev => ({ ...prev, [key]: value }));
+        }, []);
+        
+        const calculateROI = useCallback(() => {
+            const { industry, revenue, teamSize, hourlyCost, leadGenHours, followUpHours, dataEntryHours, schedulingHours, reportingHours, emailHours } = formData;
+            const totalWeeklyHours = leadGenHours + followUpHours + dataEntryHours + schedulingHours + reportingHours + emailHours;
+            const totalMonthlyHours = totalWeeklyHours * 4.33;
+            const monthlyWastedCost = totalMonthlyHours * hourlyCost;
+            const automationEfficiency = 0.8;
+            const hoursAutomated = Math.round(totalMonthlyHours * automationEfficiency);
+            const monthlySavings = hoursAutomated * hourlyCost;
+            const productivityGain = totalMonthlyHours > 0 ? Math.round((hoursAutomated / totalMonthlyHours) * 100 * 1.2) : 0;
+            const revenueBoostPercentage = industry * 0.15;
+            const monthlyRevenueBoost = revenue * revenueBoostPercentage;
+            const totalMonthlyBenefit = monthlySavings + monthlyRevenueBoost;
+            const annualBenefit = totalMonthlyBenefit * 12;
+            const annualCost = config.serviceCost;
+            const roi = annualCost > 0 ? Math.round(((annualBenefit - annualCost) / annualCost) * 100) : Infinity;
+
+            setResults({ totalMonthlyHours, monthlyWastedCost, hoursAutomated, monthlySavings, productivityGain, monthlyRevenueBoost, roi });
+        }, [formData]);
+        
+        const nextStep = () => {
+            if (currentStep < TOTAL_STEPS) {
+                if (currentStep === TOTAL_STEPS - 1) {
+                    calculateROI();
+                }
+                setCurrentStep(prev => prev + 1);
+            }
+        };
+        
+        const prevStep = () => {
+            if (currentStep > 1) {
+                setCurrentStep(prev => prev - 1);
+            }
+        };
+        
+        const stepMotionProps = {
+            initial: { opacity: 0, x: 50 },
+            animate: { opacity: 1, x: 0 },
+            exit: { opacity: 0, x: -50 },
+            transition: { duration: 0.4, ease: "easeInOut" }
+        };
+        
+        return (
+            <div className="min-h-screen bg-white">
+                <div className="px-4 sm:px-8 pt-6">
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                        <motion.div 
+                            className="bg-brand-accent h-2 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
+                            transition={{ duration: 0.5, ease: 'easeInOut' }}
+                        />
+                    </div>
+                </div>
+
+                <main className="p-4 sm:p-8">
+                    <AnimatePresence mode="wait">
+                        {currentStep === 1 && <Step1 key="step1" data={formData} updateData={updateData} motionProps={stepMotionProps} />}
+                        {currentStep === 2 && <Step2 key="step2" data={formData} updateData={updateData} motionProps={stepMotionProps} />}
+                        {currentStep === 3 && results && <Step3 key="step3" results={results} formData={formData} motionProps={stepMotionProps} />}
+                    </AnimatePresence>
+                </main>
+
+                {currentStep < TOTAL_STEPS && (
+                    <footer className="p-4 sm:p-6 border-t border-slate-200 flex justify-between items-center bg-slate-50">
+                        <button 
+                            onClick={prevStep} 
+                            disabled={currentStep === 1} 
+                            className="p-3 rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
+                            aria-label="Previous step"
+                        >
+                            <ArrowLeft size={24} weight="bold" />
+                        </button>
+                        <button 
+                            onClick={nextStep} 
+                            className="bg-brand-accent hover:bg-brand-accent-dark text-white font-semibold py-3 px-8 rounded-full shadow-md shadow-brand-accent/20 transform hover:-translate-y-0.5 transition-all"
+                        >
+                            {currentStep === TOTAL_STEPS - 1 ? 'Calculate ROI' : 'Next Step'}
+                        </button>
+                    </footer>
+                )}
+            </div>
+        );
+    };
+    
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ROICalculator />);
+    </script>
+</body>
+</html>
