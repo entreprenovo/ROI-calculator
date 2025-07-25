@@ -4,6 +4,52 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calculator, Target, Lightning, TrendUp } from 'phosphor-react';
 import ROICalculator from './components/ROICalculator.tsx';
 
+// Add this right after your imports in App.tsx
+function App() {
+  // Check if running in embed mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const isEmbedMode = urlParams.get('embed') === 'true';
+  
+  // Get config from URL parameters if in embed mode
+  const embedConfig = isEmbedMode ? {
+    serviceCost: parseInt(urlParams.get('serviceCost')) || 7500,
+    bookingUrl: urlParams.get('bookingUrl') || 'https://calendly.com/tales-couto/30min'
+  } : { serviceCost: 7500, bookingUrl: 'https://calendly.com/tales-couto/30min' };
+
+  const [isModalOpen, setIsModalOpen] = useState(isEmbedMode); // Start open if embed mode
+
+  const openModal = useCallback(() => {
+    setIsModalOpen(true);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false);
+    
+    // If in embed mode, notify parent window to close popup
+    if (isEmbedMode && window.parent !== window) {
+      window.parent.postMessage({ type: 'roi-calculator-close' }, '*');
+    }
+  }, [isEmbedMode]);
+
+  // If embed mode, don't show landing page - just the calculator
+  if (isEmbedMode) {
+    return (
+      <div className="selection:bg-brand-accent/30 text-white min-h-screen">
+        <ROICalculator
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          config={embedConfig}
+        />
+      </div>
+    );
+  }
+
+  // Regular mode - show your existing landing page
+  return (
+    // ... rest of your existing App component code
+  );
+}
+
 // Add this to the top of your App.tsx file, after the imports
 
 // Check if running in embed mode
