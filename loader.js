@@ -1,4 +1,5 @@
 <!-- loader.js content: -->
+<script>
 window.addEventListener('load',function(){
 const modalHTML=`<div id="roiModal" style="display:none;position:fixed;inset:0;z-index:999999">
 <div onclick="window.closeROICalc()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px)"></div>
@@ -26,3 +27,4 @@ window.openROICalc();
 }
 });
 });
+</script>
