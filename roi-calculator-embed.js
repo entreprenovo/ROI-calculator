@@ -1,57 +1,41 @@
 (function() {
   'use strict';
+  
+  console.log('ROI Calculator embed script loading...');
 
-  // Simple ROI Calculator popup
-  window.ROICalc = function() {
-    const args = Array.from(arguments);
-    if (args[0] === 'init') {
-      const [, namespace, config] = args;
-      console.log('ROI Calculator initializing namespace:', namespace, 'with config:', config);
+  // Create the ROICalc global object
+  window.ROICalc = function(method, namespace, config) {
+    console.log('ROICalc called with:', method, namespace, config);
+    
+    if (method === 'init') {
+      console.log('Initializing namespace:', namespace, 'with config:', config);
       
+      // Initialize the namespace
       window.ROICalc.ns = window.ROICalc.ns || {};
       window.ROICalc.ns[namespace] = {
-        config: config,
+        config: config || {},
         open: function(customConfig = {}) {
           const finalConfig = { ...config, ...customConfig };
+          console.log('Opening popup with final config:', finalConfig);
           window.ROICalc.openPopup(finalConfig);
         },
         close: function() {
           window.ROICalc.closePopup();
         },
         ui: function(options) {
-          // UI configuration (placeholder)
+          console.log('UI options set:', options);
         }
       };
       
-      console.log('ROI Calculator namespace created:', namespace);
+      console.log('Namespace', namespace, 'created successfully');
       console.log('Available namespaces:', Object.keys(window.ROICalc.ns));
     }
   };
 
-  // Add static methods
+  // Initialize the namespaces object
   window.ROICalc.ns = {};
-  
-  window.ROICalc.init = function(namespace, config) {
-    console.log('ROI Calculator initializing namespace:', namespace, 'with config:', config);
-    
-    this.ns[namespace] = {
-      config: config,
-      open: function(customConfig = {}) {
-        const finalConfig = { ...config, ...customConfig };
-        window.ROICalc.openPopup(finalConfig);
-      },
-      close: function() {
-        window.ROICalc.closePopup();
-      },
-      ui: function(options) {
-        // UI configuration (placeholder)
-      }
-    };
-    
-    console.log('ROI Calculator namespace created:', namespace);
-    console.log('Available namespaces:', Object.keys(this.ns));
-  };
-  
+
+  // Popup management
   window.ROICalc.openPopup = function(config) {
     console.log('Opening ROI Calculator popup with config:', config);
     
@@ -127,7 +111,7 @@
     // Create iframe
     const iframe = document.createElement('iframe');
     
-    // Build URL with parameters - using your GitHub Pages calculator
+    // Build URL with parameters
     const url = new URL('https://entreprenovo.github.io/ROI-calculator/');
     url.searchParams.set('embed', 'true');
     url.searchParams.set('serviceCost', config.serviceCost || 7500);
@@ -137,6 +121,8 @@
     if (config.utm_campaign) url.searchParams.set('utm_campaign', config.utm_campaign);
     if (config.utm_source) url.searchParams.set('utm_source', config.utm_source);
     if (config.utm_medium) url.searchParams.set('utm_medium', config.utm_medium);
+    
+    console.log('Loading iframe with URL:', url.toString());
     
     iframe.src = url.toString();
     iframe.style.cssText = `
@@ -191,11 +177,39 @@
     
     // Remove loader when iframe loads
     iframe.addEventListener('load', () => {
+      console.log('Iframe loaded successfully');
       setTimeout(() => {
         if (loader.parentNode) {
           loader.remove();
         }
       }, 1000);
+    });
+    
+    iframe.addEventListener('error', () => {
+      console.error('Failed to load iframe');
+      loader.innerHTML = `
+        <div style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: white;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          text-align: center;
+          z-index: 1000000;
+        ">
+          <div style="font-size: 16px;">Failed to load calculator</div>
+          <button onclick="window.ROICalc.closePopup()" style="
+            margin-top: 16px;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+          ">Close</button>
+        </div>
+      `;
     });
     
     // Close on overlay click
@@ -225,8 +239,10 @@
     window.addEventListener('message', messageHandler);
     this._currentPopup.messageHandler = messageHandler;
   };
-  
+
   window.ROICalc.closePopup = function() {
+    console.log('Closing ROI Calculator popup');
+    
     if (this._currentPopup) {
       const { overlay, escHandler, messageHandler } = this._currentPopup;
       
@@ -243,11 +259,7 @@
       this._currentPopup = null;
     }
   };
-  };
-  
-  // Auto-initialize when script loads
-  console.log('ROI Calculator embed script loaded');
-  
+
   // Handle clicks on elements with data-roi-calc-namespace
   document.addEventListener('click', function(e) {
     const element = e.target.closest('[data-roi-calc-namespace]');
@@ -275,8 +287,14 @@
       } else {
         console.warn('ROI Calculator namespace not found:', namespace);
         console.log('Available namespaces:', window.ROICalc.ns ? Object.keys(window.ROICalc.ns) : 'none');
+        
+        // Fallback - open directly with config
+        console.log('Attempting direct open as fallback...');
+        window.ROICalc.openPopup(config);
       }
     }
   });
+
+  console.log('ROI Calculator embed script loaded successfully');
 
 })();
