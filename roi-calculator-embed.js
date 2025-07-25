@@ -3,24 +3,24 @@
   
   console.log('ROI Calculator embed script loading...');
 
-  // Create the ROICalc global object
-  window.ROICalc = function(method, namespace, config) {
+  // Create the ROICalc global object with proper initialization
+  const ROICalc = function(method, namespace, config) {
     console.log('ROICalc called with:', method, namespace, config);
     
     if (method === 'init') {
       console.log('Initializing namespace:', namespace, 'with config:', config);
       
       // Initialize the namespace
-      window.ROICalc.ns = window.ROICalc.ns || {};
-      window.ROICalc.ns[namespace] = {
+      ROICalc.ns = ROICalc.ns || {};
+      ROICalc.ns[namespace] = {
         config: config || {},
         open: function(customConfig = {}) {
           const finalConfig = { ...config, ...customConfig };
           console.log('Opening popup with final config:', finalConfig);
-          window.ROICalc.openPopup(finalConfig);
+          ROICalc.openPopup(finalConfig);
         },
         close: function() {
-          window.ROICalc.closePopup();
+          ROICalc.closePopup();
         },
         ui: function(options) {
           console.log('UI options set:', options);
@@ -28,15 +28,18 @@
       };
       
       console.log('Namespace', namespace, 'created successfully');
-      console.log('Available namespaces:', Object.keys(window.ROICalc.ns));
+      console.log('Available namespaces:', Object.keys(ROICalc.ns));
     }
   };
 
+  // Expose ROICalc globally
+  window.ROICalc = ROICalc;
+
   // Initialize the namespaces object
-  window.ROICalc.ns = {};
+  ROICalc.ns = {};
 
   // Popup management
-  window.ROICalc.openPopup = function(config) {
+  ROICalc.openPopup = function(config) {
     console.log('Opening ROI Calculator popup with config:', config);
     
     // Remove existing popup if any
@@ -240,7 +243,7 @@
     this._currentPopup.messageHandler = messageHandler;
   };
 
-  window.ROICalc.closePopup = function() {
+  ROICalc.closePopup = function() {
     console.log('Closing ROI Calculator popup');
     
     if (this._currentPopup) {
