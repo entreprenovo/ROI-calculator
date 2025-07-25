@@ -1,0 +1,6 @@
+{
+  "name": "AI Automation ROI Calculator",
+  "description": "An interactive web application that helps businesses calculate their potential Return on Investment (ROI) from implementing AI automation solutions. Users can input their business metrics to see estimated savings and productivity gains.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
