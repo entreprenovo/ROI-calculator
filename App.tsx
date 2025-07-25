@@ -1,10 +1,8 @@
-
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calculator, Target, Lightning, TrendUp } from 'phosphor-react';
 import ROICalculator from './components/ROICalculator.tsx';
 
-// Add this right after your imports in App.tsx
 function App() {
   // Check if running in embed mode
   const urlParams = new URLSearchParams(window.location.search);
@@ -15,6 +13,8 @@ function App() {
     serviceCost: parseInt(urlParams.get('serviceCost')) || 7500,
     bookingUrl: urlParams.get('bookingUrl') || 'https://calendly.com/tales-couto/30min'
   } : { serviceCost: 7500, bookingUrl: 'https://calendly.com/tales-couto/30min' };
+
+  console.log('App loaded - isEmbedMode:', isEmbedMode, 'config:', embedConfig);
 
   const [isModalOpen, setIsModalOpen] = useState(isEmbedMode); // Start open if embed mode
 
@@ -27,14 +27,16 @@ function App() {
     
     // If in embed mode, notify parent window to close popup
     if (isEmbedMode && window.parent !== window) {
+      console.log('Sending close message to parent');
       window.parent.postMessage({ type: 'roi-calculator-close' }, '*');
     }
   }, [isEmbedMode]);
 
   // If embed mode, don't show landing page - just the calculator
   if (isEmbedMode) {
+    console.log('Rendering in embed mode');
     return (
-      <div className="selection:bg-brand-accent/30 text-white min-h-screen">
+      <div className="selection:bg-brand-accent/30 text-white min-h-screen bg-gray-900">
         <ROICalculator
           isOpen={isModalOpen}
           onClose={closeModal}
@@ -45,91 +47,6 @@ function App() {
   }
 
   // Regular mode - show your existing landing page
-  return (
-    // ... rest of your existing App component code
-  );
-}
-
-// Add this to the top of your App.tsx file, after the imports
-
-// Check if running in embed mode
-const urlParams = new URLSearchParams(window.location.search);
-const isEmbedMode = urlParams.get('embed') === 'true';
-const embedConfig = {
-  serviceCost: parseInt(urlParams.get('serviceCost')) || 7500,
-  bookingUrl: urlParams.get('bookingUrl') || 'https://calendly.com/tales-couto/30min',
-  utmCampaign: urlParams.get('utm_campaign'),
-  utmSource: urlParams.get('utm_source'),
-  utmMedium: urlParams.get('utm_medium')
-};
-
-// Modify your App component like this:
-function App() {
-  const [isModalOpen, setIsModalOpen] = useState(isEmbedMode); // Start open if embed mode
-
-  const openModal = useCallback(() => {
-    setIsModalOpen(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-    
-    // If in embed mode, send close message to parent
-    if (isEmbedMode && window.parent !== window) {
-      window.parent.postMessage({ type: 'roi-calculator-close' }, '*');
-    }
-  }, []);
-
-  // If embed mode, don't show the landing page content
-  if (isEmbedMode) {
-    return (
-      <div className="selection:bg-brand-accent/30 text-white min-h-screen">
-        <ROICalculator
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          config={embedConfig}
-        />
-      </div>
-    );
-  }
-
-  // Regular mode - show full landing page
-  return (
-    <div className="selection:bg-brand-accent/30 text-white min-h-screen flex flex-col items-center justify-center p-4">
-      {/* Your existing landing page content */}
-      <div className="text-center max-w-4xl mx-auto">
-        {/* ... rest of your existing App component ... */}
-      </div>
-
-      <AnimatePresence>
-        <motion.button
-          onClick={openModal}
-          // ... your existing button props
-        >
-          Calculate Your ROI
-        </motion.button>
-      </AnimatePresence>
-
-      <ROICalculator
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        config={{ serviceCost: 7500, bookingUrl: 'https://calendly.com/tales-couto/30min' }}
-      />
-    </div>
-  );
-}
-
-function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const openModal = useCallback(() => {
-    setIsModalOpen(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
-
   return (
     <div className="selection:bg-brand-accent/30 text-white min-h-screen flex flex-col items-center justify-center p-4">
       <div className="text-center max-w-4xl mx-auto">
@@ -202,7 +119,7 @@ function App() {
       <ROICalculator
         isOpen={isModalOpen}
         onClose={closeModal}
-        config={{ serviceCost: 7500, bookingUrl: 'https://calendly.com/tales-couto/30min' }}
+        config={embedConfig}
       />
     </div>
   );
