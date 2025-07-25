@@ -1,52 +1,31 @@
-(function (window, document) {
+(function() {
   'use strict';
 
-  const ROICalc = {
-    loaded: false,
+  // Simple ROI Calculator popup
+  window.ROICalc = {
     ns: {},
-    q: [],
-    instance: null,
     
-    init: function(namespace, config = {}) {
-      this.loaded = true;
-      if (namespace) {
-        this.ns[namespace] = this.createInstance(config);
-      }
-      this.processQueue();
-    },
-    
-    createInstance: function(config) {
-      const instance = {
-        config: {
-          calculatorUrl: 'https://entreprenovo.github.io/roi-calculator/',
-          serviceCost: 7500,
-          bookingUrl: 'https://calendly.com/tales-couto/30min',
-          ...config
-        },
-        
-        ui: function(options) {
-          this.uiOptions = { ...this.uiOptions, ...options };
-        },
-        
+    init: function(namespace, config) {
+      this.ns[namespace] = {
+        config: config,
         open: function(customConfig = {}) {
-          const finalConfig = { ...this.config, ...customConfig };
-          ROICalc.openCalculator(finalConfig);
+          const finalConfig = { ...config, ...customConfig };
+          ROICalc.openPopup(finalConfig);
         },
-        
         close: function() {
-          ROICalc.closeCalculator();
+          ROICalc.closePopup();
+        },
+        ui: function(options) {
+          // UI configuration (placeholder)
         }
       };
-      
-      return instance;
     },
     
-    openCalculator: function(config) {
-      console.log('Opening calculator with config:', config);
+    openPopup: function(config) {
+      console.log('Opening ROI Calculator popup with config:', config);
       
-      if (this.instance) {
-        this.closeCalculator();
-      }
+      // Remove existing popup if any
+      this.closePopup();
       
       // Create overlay
       const overlay = document.createElement('div');
@@ -63,10 +42,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        padding: 16px;
         box-sizing: border-box;
-        opacity: 0;
-        transition: opacity 0.3s ease;
       `;
       
       // Create iframe container
@@ -77,12 +54,10 @@
         max-width: 1200px;
         height: 90vh;
         max-height: 800px;
-        background: transparent;
+        background: #1a1a1a;
         border-radius: 16px;
         overflow: hidden;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        transform: scale(0.95);
-        transition: transform 0.3s ease;
       `;
       
       // Create close button
@@ -100,47 +75,48 @@
         font-size: 24px;
         font-weight: bold;
         cursor: pointer;
-        z-index: 1000000;
+        z-index: 1000001;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #333;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
       `;
       
+      closeBtn.addEventListener('click', () => this.closePopup());
       closeBtn.addEventListener('mouseenter', () => {
-        closeBtn.style.background = 'rgba(255, 255, 255, 1)';
+        closeBtn.style.background = 'white';
+        closeBtn.style.transform = 'scale(1.1)';
       });
-      
       closeBtn.addEventListener('mouseleave', () => {
         closeBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+        closeBtn.style.transform = 'scale(1)';
       });
       
       // Create iframe
       const iframe = document.createElement('iframe');
-      const calculatorUrl = new URL(config.calculatorUrl);
       
-      // Add config as URL parameters
-      const params = new URLSearchParams();
-      params.set('embed', 'true');
-      params.set('serviceCost', config.serviceCost);
-      params.set('bookingUrl', config.bookingUrl);
-      if (config.utm_campaign) params.set('utm_campaign', config.utm_campaign);
-      if (config.utm_source) params.set('utm_source', config.utm_source);
-      if (config.utm_medium) params.set('utm_medium', config.utm_medium);
+      // Build URL with parameters - using your GitHub Pages calculator
+      const url = new URL('https://entreprenovo.github.io/ROI-calculator/');
+      url.searchParams.set('embed', 'true');
+      url.searchParams.set('serviceCost', config.serviceCost || 7500);
+      url.searchParams.set('bookingUrl', config.bookingUrl || 'https://calendly.com/tales-couto/30min');
       
-      calculatorUrl.search = params.toString();
+      // Add UTM parameters if provided
+      if (config.utm_campaign) url.searchParams.set('utm_campaign', config.utm_campaign);
+      if (config.utm_source) url.searchParams.set('utm_source', config.utm_source);
+      if (config.utm_medium) url.searchParams.set('utm_medium', config.utm_medium);
       
-      iframe.src = calculatorUrl.toString();
+      iframe.src = url.toString();
       iframe.style.cssText = `
         width: 100%;
         height: 100%;
         border: none;
         border-radius: 16px;
-        background: #0f0f0f;
+        background: #1a1a1a;
       `;
       
-      // Add loading indicator
+      // Add loading state
       const loader = document.createElement('div');
       loader.innerHTML = `
         <div style="
@@ -151,6 +127,7 @@
           color: white;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           text-align: center;
+          z-index: 1000000;
         ">
           <div style="
             width: 40px;
@@ -171,6 +148,7 @@
         </style>
       `;
       
+      // Assemble the popup
       container.appendChild(loader);
       container.appendChild(closeBtn);
       container.appendChild(iframe);
@@ -180,129 +158,98 @@
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
       
-      // Fade in animation
-      setTimeout(() => {
-        overlay.style.opacity = '1';
-        container.style.transform = 'scale(1)';
-      }, 10);
-      
       // Remove loader when iframe loads
       iframe.addEventListener('load', () => {
         setTimeout(() => {
           if (loader.parentNode) {
             loader.remove();
           }
-        }, 500);
+        }, 1000);
       });
       
-      // Event listeners
-      closeBtn.addEventListener('click', () => {
-        this.closeCalculator();
-      });
-      
+      // Close on overlay click
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-          this.closeCalculator();
+          this.closePopup();
         }
       });
       
-      // Listen for messages from iframe
-      window.addEventListener('message', (event) => {
-        if (event.origin !== calculatorUrl.origin) return;
-        
-        if (event.data.type === 'roi-calculator-close') {
-          this.closeCalculator();
-        }
-      });
-      
-      // ESC key to close
+      // Close on ESC key
       const escHandler = (e) => {
         if (e.key === 'Escape') {
-          this.closeCalculator();
-          document.removeEventListener('keydown', escHandler);
+          this.closePopup();
         }
       };
       document.addEventListener('keydown', escHandler);
       
-      this.instance = { overlay, container, escHandler };
+      // Store references for cleanup
+      this._currentPopup = { overlay, escHandler };
+      
+      // Listen for close message from iframe
+      const messageHandler = (event) => {
+        if (event.data && event.data.type === 'roi-calculator-close') {
+          this.closePopup();
+        }
+      };
+      window.addEventListener('message', messageHandler);
+      this._currentPopup.messageHandler = messageHandler;
     },
     
-    closeCalculator: function() {
-      if (this.instance) {
-        const { overlay, escHandler } = this.instance;
+    closePopup: function() {
+      if (this._currentPopup) {
+        const { overlay, escHandler, messageHandler } = this._currentPopup;
         
-        // Fade out animation
-        overlay.style.opacity = '0';
-        overlay.querySelector('div').style.transform = 'scale(0.95)';
+        if (overlay && overlay.parentNode) {
+          document.body.removeChild(overlay);
+        }
         
-        setTimeout(() => {
-          if (overlay.parentNode) {
-            document.body.removeChild(overlay);
-          }
-          document.body.style.overflow = '';
-        }, 300);
-        
+        document.body.style.overflow = '';
         document.removeEventListener('keydown', escHandler);
-        this.instance = null;
-      }
-    },
-    
-    processQueue: function() {
-      this.q.forEach(args => {
-        this.handleCall(...args);
-      });
-      this.q = [];
-    },
-    
-    handleCall: function(method, ...args) {
-      if (method === 'init') {
-        this.init(...args);
-      } else if (method === 'open') {
-        const [namespace, config] = args;
-        if (this.ns[namespace]) {
-          this.ns[namespace].open(config);
+        if (messageHandler) {
+          window.removeEventListener('message', messageHandler);
         }
-      } else if (method === 'close') {
-        this.closeCalculator();
+        
+        this._currentPopup = null;
       }
     }
   };
   
-  // Global API
-  window.ROICalc = function() {
-    const args = Array.from(arguments);
-    if (!ROICalc.loaded) {
-      ROICalc.q.push(args);
-    } else {
-      ROICalc.handleCall(...args);
-    }
-  };
+  // Auto-initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initClickHandler);
+  } else {
+    initClickHandler();
+  }
   
-  // Event delegation for data attributes (just like Cal.com)
-  document.addEventListener('click', function(e) {
-    const element = e.target.closest('[data-roi-calc-namespace]');
-    if (element) {
-      e.preventDefault();
-      const namespace = element.getAttribute('data-roi-calc-namespace');
-      const configAttr = element.getAttribute('data-roi-calc-config');
-      let config = {};
-      
-      if (configAttr) {
-        try {
-          config = JSON.parse(configAttr);
-        } catch (err) {
-          console.warn('Invalid data-roi-calc-config JSON:', err);
+  function initClickHandler() {
+    // Handle clicks on elements with data-roi-calc-namespace
+    document.addEventListener('click', function(e) {
+      const element = e.target.closest('[data-roi-calc-namespace]');
+      if (element) {
+        e.preventDefault();
+        
+        const namespace = element.getAttribute('data-roi-calc-namespace');
+        const configAttr = element.getAttribute('data-roi-calc-config');
+        
+        console.log('ROI Calculator button clicked, namespace:', namespace);
+        
+        let config = {};
+        if (configAttr) {
+          try {
+            config = JSON.parse(configAttr);
+            console.log('Config parsed:', config);
+          } catch (err) {
+            console.warn('Invalid data-roi-calc-config JSON:', err);
+          }
+        }
+        
+        if (window.ROICalc.ns[namespace]) {
+          window.ROICalc.ns[namespace].open(config);
+        } else {
+          console.warn('ROI Calculator namespace not found:', namespace);
         }
       }
-      
-      console.log('Opening calculator for namespace:', namespace, 'with config:', config);
-      
-      if (ROICalc.ns[namespace]) {
-        ROICalc.ns[namespace].open(config);
-      } else {
-        console.warn('Namespace not found:', namespace);
-      }
-    }
-  });
+    });
+  }
   
-})(window, document);
+})();
